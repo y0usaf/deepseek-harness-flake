@@ -1,5 +1,5 @@
 {
-  description = "DeepSeek Harness (dsh) packaged from the published npm tarball";
+  description = "DeepSeek Harness (dsh): CLI from npm, desktop app repackaged from the macOS DMG";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -16,10 +16,12 @@
       packages = forAllSystems (system: {
         dsh = mkDsh system;
         default = mkDsh system;
+        dsh-desktop = nixpkgs.legacyPackages.${system}.callPackage ./desktop.nix { };
       });
 
       overlays.default = final: prev: {
         dsh = final.callPackage ./dsh.nix { };
+        dsh-desktop = final.callPackage ./desktop.nix { };
       };
     };
 }
