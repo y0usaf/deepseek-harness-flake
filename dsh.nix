@@ -13,10 +13,6 @@ let
   versionData = lib.importJSON ./hashes.json;
   inherit (versionData) version;
 
-  # The npm tarball ships no lockfile. Ours is generated without
-  # devDependencies (devDependencies reference an unpublished
-  # @deepseek-ai package, which makes `npm install` fail with E404),
-  # so drop them from the manifest here too.
   srcWithLock = runCommand "dsh-source" { nativeBuildInputs = [ jq ]; } ''
     mkdir -p $out
     tar -xzf ${

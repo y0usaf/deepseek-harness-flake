@@ -23,15 +23,12 @@
 let
   version = "0.1.7-rc.1.20260924.1";
 
-  # node-addon-require-builtin fingerprints the exact Electron runtime and
-  # accepts 44.0.0 (what the DMG ships), not nixpkgs' 44.x.
   electron = electron_44-bin.overrideAttrs (old: {
     version = "44.0.0";
     src = fetchurl {
       url = "https://github.com/electron/electron/releases/download/v44.0.0/electron-v44.0.0-linux-x64.zip";
       hash = "sha256-1lKG2BJxnytMGhuAaoDyiKEFjInHsFja4eA6sl5JlEY=";
     };
-    # 44.0.0 ships no separate libEGL/libGLESv2 for nixpkgs to patch.
     postFixup =
       let
         angle = "$out/libexec/electron/lib*GL*";
@@ -40,8 +37,6 @@ let
       lib.replaceStrings [ angle ] [ "$out/libexec/electron/libvk_swiftshader.so" ] old.postFixup;
   });
 
-  # The app bundles darwin-arm64 builds of these native packages. Swap in the
-  # Linux x64 build of the same version: bundled dir -> npm replacement.
   natives = {
     "sherpa-onnx-darwin-arm64" = {
       pkg = "sherpa-onnx-linux-x64";
@@ -63,9 +58,6 @@ let
       version = "3.3.1";
       hash = "sha256-Tl/hRecxQzG59zSIFArPqatpnD20A3UxvvPz4EKKzy4=";
     };
-    # sharp's Linux prebuilds bundle a static GLib that clashes with the one
-    # Electron loads (segfault in g_object_unref); sharp is built from source
-    # against nixpkgs vips instead, so these are dropped without replacement.
     "@img/sharp-libvips-darwin-arm64" = null;
     "@img/sharp-darwin-arm64" = null;
     "@deepseek-ai/node-addon-system-darwin-arm64" = {
@@ -73,13 +65,11 @@ let
       version = "0.1.2";
       hash = "sha256-d/t3G+4hM8P/0flse5Q13bHMrucraBT29DkTQ6YRzCA=";
     };
-    # No Linux native build exists; the package falls back to wasm.
     "@deepseek-ai/libreoffice-kit-darwin-arm64" = {
       pkg = "@deepseek-ai/libreoffice-kit-wasm";
       version = "0.1.0";
       hash = "sha256-LzEc21gm5Cgt5ueZOL9+B96Aqs+335x+TC9MfeeskVc=";
     };
-    # The bundled copy only carries darwin prebuilds; the npm tarball has linux-x64.
     "node-pty" = {
       pkg = "node-pty";
       version = "1.2.0-beta.15";
@@ -105,7 +95,6 @@ let
     ) natives
   );
 
-  # runtime.json distribution name -> nixpkgs python attribute.
   pythonDists = {
     numpy = "numpy";
     pandas = "pandas";
@@ -123,8 +112,6 @@ let
   };
   python = python312.withPackages (ps: map (a: ps.${a}) (lib.attrValues pythonDists));
 
-  # Fields of the bundled primary-runtime/runtime.json that describe the payload
-  # we substitute; desktopVersion and pnpm are kept from upstream.
   runtimeOverrides = builtins.toJSON {
     platform = "linux";
     arch = "x64";
@@ -137,7 +124,6 @@ stdenv.mkDerivation {
   pname = "dsh-desktop";
   inherit version;
 
-  # Upstream removed this DMG from download.deepseek.com; mirrored unmodified.
   src = fetchurl {
     url = "https://github.com/y0usaf/deepseek-harness-flake/releases/download/desktop-${version}/deepseek-harness-${version}-mac-arm64.dmg";
     hash = "sha256-+9+LbmdgzPj1F0iqOhLDA5fwJfEKgrQsWcrceAbCSZQ=";
@@ -224,10 +210,8 @@ stdenv.mkDerivation {
     runHook postInstall
   '';
 
-  # Only the swapped npm prebuilds need patching; the Electron copy already is.
   dontAutoPatchelf = true;
   dontPatchELF = true;
-  # musl variants ship alongside glibc ones and are never loaded here.
   autoPatchelfIgnoreMissingDeps = [ "libc.musl-x86_64.so.1" ];
   dontWrapGApps = true;
   postFixup = ''
