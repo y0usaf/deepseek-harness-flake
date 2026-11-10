@@ -1,19 +1,39 @@
 {
   lib,
+  autoPatchelfHook,
   bashInteractive,
   buildNpmPackage,
   fetchurl,
   jq,
   makeWrapper,
-  nodejs,
   runCommand,
+  stdenv,
+  stdenvNoCC,
+  xz,
 }:
 
 let
   versionData = lib.importJSON ./hashes.json;
   inherit (versionData) version;
 
-  srcWithLock = runCommand "dsh-source" { nativeBuildInputs = [ jq ]; } ''
+  node = stdenvNoCC.mkDerivation {
+    pname = "node-dsh";
+    version = "24.10.0";
+    src = fetchurl {
+      url = "https://nodejs.org/dist/v24.10.0/node-v24.10.0-linux-x64.tar.xz";
+      hash = "sha256-JkL0QohprKMkQ2YP1xs5GOK+Eneomb3K62TJO1S1rxc=";
+    };
+    nativeBuildInputs = [ autoPatchelfHook xz ];
+    buildInputs = [ stdenv.cc.cc.lib ];
+    installPhase = ''
+      mkdir -p $out
+      cp -r . $out/
+      autoPatchelf $out/bin/node
+    '';
+    meta.platforms = [ "x86_64-linux" ];
+  };
+
+  srcWithLock = runCommand "dsh-source" { nativeBuildInputs = [ jq xz ]; } ''
     mkdir -p $out
     tar -xzf ${
       fetchurl {
@@ -47,7 +67,7 @@ buildNpmPackage {
     # Replace the upstream bin (a bare `lib/bin.js` symlink) with a
     # wrapper that runs node with --expose-internals, which dsh requires.
     rm $out/bin/dsh
-    makeWrapper ${lib.getExe nodejs} $out/bin/dsh \
+    makeWrapper ${node}/bin/node $out/bin/dsh \
       --argv0 dsh \
       --add-flags "--expose-internals" \
       --add-flags "$out/lib/node_modules/@deepseek-ai/dsh/lib/bin.js"

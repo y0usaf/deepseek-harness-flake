@@ -71,10 +71,13 @@ User data lives in `~/.dsh` and `~/.config/DeepSeek Harness`.
 
 ## Pinned version
 
-CLI: `0.1.5-rc.2` -- the current npm `latest` / `next` dist-tag. Hashes live in
-`hashes.json`; the `package-lock.json` is generated from the tarball's own
-manifest with `devDependencies` removed (they reference an unpublished
-`@deepseek-ai` package and break `npm install`).
+CLI: `0.2.1-rc.3`. Hashes live in `hashes.json`; the `package-lock.json` is
+generated from the tarball's own manifest with `devDependencies` removed (they
+reference an unpublished `@deepseek-ai` package and break `npm install`).
+
+dsh intercepts Node internals through a native loader that only recognizes the
+V8 layout of Node **24.10.0**, so the package runs on that release's official
+Linux x64 binary rather than nixpkgs' newer Node.
 
 ## Caveat
 
